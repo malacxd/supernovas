@@ -18,7 +18,7 @@ GUILD_ROLES = {
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = discord.Client(intents=intents)
 
 
 class UsernameModal(discord.ui.Modal, title="Guild Application"):
