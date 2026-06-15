@@ -3,7 +3,7 @@ import os
 from discord import role
 from discord.ext import commands
 
-TOKEN = "MTUxNjE2MzU3ODM4NDc0ODY2NA.GB4KO8.4P5kJRG5RpWHr_xdUvPjjgW6mwaov6vreZ6qTQ"
+bot.run(os.getenv("DISCORD_TOKEN"))
 STAFF_CHANNEL_ID = 1516159145869574265  # your admin review channel
 LOG_CHANNEL_ID = 1516159164274180268    # logs channel
 STAFF_ROLE_ID = 1516156178395172985     # role to ping
