@@ -2,12 +2,14 @@ import os
 import discord
 from discord.ext import commands
 
+# ----------------- INTENTS -----------------
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# ----------------- CONFIG -----------------
 STAFF_CHANNEL_ID = 1516159145869574265
 LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516156178395172985
@@ -18,10 +20,12 @@ GUILD_ROLES = {
     "GLN": 1516167020847042580
 }
 
+GUILD_ID = 1516146879967002724
 
-# ---------- UI ELEMENTS ----------
 
+# ----------------- MODAL -----------------
 class UsernameModal(discord.ui.Modal, title="Guild Application"):
+
     mc_username = discord.ui.TextInput(
         label="Minecraft Username",
         required=True,
@@ -36,7 +40,9 @@ class UsernameModal(discord.ui.Modal, title="Guild Application"):
         )
 
 
+# ----------------- GUILD SELECT -----------------
 class GuildSelect(discord.ui.Select):
+
     def __init__(self, username):
         self.username = username
 
@@ -46,15 +52,24 @@ class GuildSelect(discord.ui.Select):
             discord.SelectOption(label="GLN")
         ]
 
-        super().__init__(placeholder="Choose your guild", options=options)
+        super().__init__(
+            placeholder="Choose your guild",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
 
     async def callback(self, interaction: discord.Interaction):
+
         guild_name = self.values[0]
         member = interaction.user
 
         staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
 
-        embed = discord.Embed(title="📥 New Verification", color=discord.Color.orange())
+        embed = discord.Embed(
+            title="📥 New Application",
+            color=discord.Color.orange()
+        )
         embed.add_field(name="User", value=member.mention, inline=False)
         embed.add_field(name="Minecraft Name", value=self.username, inline=False)
         embed.add_field(name="Guild", value=guild_name, inline=False)
@@ -65,7 +80,10 @@ class GuildSelect(discord.ui.Select):
             view=ReviewView(member.id, self.username, guild_name)
         )
 
-        await interaction.response.send_message("Submitted!", ephemeral=True)
+        await interaction.response.send_message(
+            "Application submitted!",
+            ephemeral=True
+        )
 
 
 class GuildSelectView(discord.ui.View):
@@ -74,6 +92,7 @@ class GuildSelectView(discord.ui.View):
         self.add_item(GuildSelect(username))
 
 
+# ----------------- APPLY BUTTON -----------------
 class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -83,6 +102,7 @@ class ApplyView(discord.ui.View):
         await interaction.response.send_modal(UsernameModal())
 
 
+# ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
     def __init__(self, member_id, mc_name, guild_name):
         super().__init__(timeout=None)
@@ -96,26 +116,71 @@ class ReviewView(discord.ui.View):
 
         member = interaction.guild.get_member(self.member_id)
         role = interaction.guild.get_role(GUILD_ROLES[self.guild_name])
+        log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
-        if member:
+        if member and role:
             await member.edit(nick=self.mc_name)
             await member.add_roles(role)
 
+        if log_channel:
+            embed = discord.Embed(
+                title="✅ Accepted",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="User", value=member.mention)
+            embed.add_field(name="MC Name", value=self.mc_name)
+            embed.add_field(name="Guild", value=self.guild_name)
+
+            await log_channel.send(embed=embed)
+
         await interaction.message.delete()
+
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
+
+        log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
+
+        if log_channel:
+            embed = discord.Embed(
+                title="❌ Denied",
+                color=discord.Color.red()
+            )
+            embed.add_field(name="User", value=f"<@{self.member_id}>")
+            embed.add_field(name="MC Name", value=self.mc_name)
+            embed.add_field(name="Guild", value=self.guild_name)
+
+            await log_channel.send(embed=embed)
+
         await interaction.message.delete()
 
 
-# ---------- EVENTS ----------
+# ----------------- SLASH COMMAND -----------------
+@bot.tree.command(name="setup_application", description="Create application panel")
+async def setup_application(interaction: discord.Interaction):
 
+    embed = discord.Embed(
+        title="Guild Application",
+        description="Click Apply to join a guild.",
+        color=discord.Color.blurple()
+    )
+
+    await interaction.channel.send(embed=embed, view=ApplyView())
+    await interaction.response.send_message("Panel created!", ephemeral=True)
+
+
+# ----------------- SYNC FIX -----------------
 @bot.event
 async def on_ready():
+    try:
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+        print(f"Synced {len(synced)} commands")
+    except Exception as e:
+        print(e)
+
     print(f"Logged in as {bot.user}")
 
 
-# ---------- START BOT ----------
-
+# ----------------- RUN BOT -----------------
 bot.run(os.getenv("DISCORD_TOKEN"))
