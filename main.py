@@ -24,7 +24,7 @@ GUILD_ID = 1516146879967002724
 
 
 # ----------------- MODAL -----------------
-class UsernameModal(discord.ui.Modal, title="Guild Application"):
+class UsernameModal(discord.ui.Modal, title="Verification"):
 
     mc_username = discord.ui.TextInput(
         label="Minecraft Username",
@@ -161,8 +161,8 @@ class ReviewView(discord.ui.View):
 async def setup_application(interaction: discord.Interaction):
 
     embed = discord.Embed(
-        title="Guild Application",
-        description="Click Apply to join a guild.",
+        title="Verification",
+        description="Click Apply to verify.",
         color=discord.Color.blurple()
     )
 
