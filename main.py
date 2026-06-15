@@ -160,6 +160,15 @@ class ReviewView(discord.ui.View):
 @bot.tree.command(name="setup_application", description="Create application panel")
 async def setup_application(interaction: discord.Interaction):
 
+    staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
+
+    if staff_role not in interaction.user.roles:
+        await interaction response.send_message(
+            "❌ You don't have permission to use this command.",
+            ephemeral=True
+        )
+        return
+    
     embed = discord.Embed(
         title="Verification",
         description="Click Apply to verify.",
