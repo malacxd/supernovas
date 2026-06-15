@@ -163,7 +163,7 @@ async def setup_application(interaction: discord.Interaction):
     staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
 
     if staff_role not in interaction.user.roles:
-        await interaction response.send_message(
+        await interaction.response.send_message(
             "❌ You don't have permission to use this command.",
             ephemeral=True
         )
