@@ -240,4 +240,4 @@ class ReviewView(discord.ui.View):
         except discord.Forbidden:
             await interaction.followup.send("Bot doesn't have permission to delete this message.", ephemeral=True)
 
-client.run(os.getenv("DISCORD_TOKEN"))
+bot.run(os.getenv("DISCORD_TOKEN"))
