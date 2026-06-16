@@ -211,7 +211,7 @@ async def setup_application(interaction: discord.Interaction):
     await interaction.channel.send(embed=embed, view=ApplyView())
     await interaction.response.send_message("Panel created!", ephemeral=True)
 
-@bot.tree.command(name="tos", description="Show Terms of Service")
+@bot.tree.command(name="tos", description="Show Terms of Service", guild=discord.Object(id=GUILD_ID))
 async def tos(interaction: discord.Interaction):
     embed = discord.Embed(
         title="📜 Terms of Service",
@@ -220,7 +220,7 @@ async def tos(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="privacy", description="Show Privacy Policy")
+@bot.tree.command(name="privacy", description="Show Privacy Policy", guild=discord.Object(id=GUILD_ID))
 async def privacy(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🔐 Privacy Policy",
@@ -235,13 +235,13 @@ async def privacy(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} commands")
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        print(f"Synced {len(synced)} commands (guild)")
     except Exception as e:
         print(e)
 
     print(f"Logged in as {bot.user}")
-    print("COMMANDS:", bot.tree.get_commands())
 
 # ----------------- RUN BOT -----------------
 bot.run(os.getenv("DISCORD_TOKEN"))
