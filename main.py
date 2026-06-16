@@ -156,12 +156,12 @@ class GuildSelect(discord.ui.Select):
             embed.add_field(name="MC Name", value=self.username, inline=False)
             embed.add_field(name="Guild", value=guild_name, inline=False)
 
-            await staff_channel.send(embed=embed)
-
             await staff_channel.send(
-            embed=embed,
-            view=AppActionView(app_id)
+                embed=embed,
+                view=AppActionView(app_id)
             )
+
+            await interaction.followup.send(
                 "✅ Application submitted successfully!",
                 ephemeral=True
             )
