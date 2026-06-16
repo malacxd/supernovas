@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import asyncio
 import itertools
+import json
 
 # ----------------- TEXTS -----------------
 TOS_TEXT = """
@@ -57,10 +58,24 @@ GUILD_ROLES = {
     "GLN": 1516167020847042580
 }
 
-app_count = 0
-accepted_count = 0
-denied_count = 0
+# stats["app_count"]
+DATA_FILE = "stats.json"
 last_activity = "idle"
+
+def load_stats():
+    try:
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {
+            "app_count": 0
+        }
+
+stats = load_stats()
+
+def save_stats():
+    with open(DATA_FILE, "w") as f:
+        json.dump(stats, f)
 
 # ----------------- MODAL -----------------
 class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
@@ -100,8 +115,8 @@ class GuildSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
 
         global app_count, last_activity
-        app_count += 1
-        last_activity = "application"
+        stats["app_count"] += 1
+        save_stats()
 
         guild_name = self.values[0]
         member = interaction.user
@@ -305,29 +320,19 @@ async def on_ready():
                 name=f"{app_count} applications"
             )
         )
-        await asyncio.sleep(10)
+        await asyncio.sleep(30)
 
         # 2) General system status
         await bot.change_presence(
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="verification system"
+                name="grinding bat cave"
             )
         )
-        await asyncio.sleep(10)
+        await asyncio.sleep(30)
 
         # 3) Guild management
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.playing,
-                name="beating Anathema"
-            )
-        )
-        await asyncio.sleep(10)
-
-        # 4) Staff activity vibe
         await bot.change_presence(
             status=discord.Status.idle,
             activity=discord.Activity(
@@ -335,7 +340,26 @@ async def on_ready():
                 name="join tdbd"
             )
         )
-        await asyncio.sleep(10)
+        await asyncio.sleep(30)
+
+        # 4) Staff activity vibe
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.playing,
+                name="beating Anathema"
+            )
+        )
+        await asyncio.sleep(30)
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="lootrunning for nothing"
+            )
+        )
+        await asyncio.sleep(30)
 
 
 # ----------------- RUN BOT -----------------
