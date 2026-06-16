@@ -158,7 +158,10 @@ class GuildSelect(discord.ui.Select):
 
             await staff_channel.send(embed=embed)
 
-            await interaction.followup.send(
+            await staff_channel.send(
+            embed=embed,
+            view=AppActionView(app_id)
+            )
                 "✅ Application submitted successfully!",
                 ephemeral=True
             )
