@@ -281,7 +281,6 @@ async def on_ready():
     status=discord.Status.idle,
         activity=discord.Game(name="Wynncraft")
     )
-)
 
     print(f"Logged in as {bot.user}")
 
