@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands
 
+# ----------------- TEXTS -----------------
 TOS_TEXT = """
 📜 TERMS OF SERVICE
 
@@ -29,7 +30,6 @@ We use this data only for:
 - Role assignment
 - Moderation logging
 
-Data is stored in Discord channels (staff + logs).
 We do not sell or share your data externally.
 
 Last updated: 2026-06-16
@@ -43,6 +43,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ----------------- CONFIG -----------------
+GUILD_ID = 1516146879967002724
+
 STAFF_CHANNEL_ID = 1516159145869574265
 LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516156178395172985
@@ -53,11 +55,8 @@ GUILD_ROLES = {
     "GLN": 1516167020847042580
 }
 
-GUILD_ID = 1516146879967002724
-
-
 # ----------------- MODAL -----------------
-class UsernameModal(discord.ui.Modal, title="Verification"):
+class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
 
     mc_username = discord.ui.TextInput(
         label="Minecraft Username",
@@ -67,11 +66,10 @@ class UsernameModal(discord.ui.Modal, title="Verification"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            "Select your guild:",
+            "Now select your guild:",
             view=GuildSelectView(self.mc_username.value),
             ephemeral=True
         )
-
 
 # ----------------- GUILD SELECT -----------------
 class GuildSelect(discord.ui.Select):
@@ -101,8 +99,10 @@ class GuildSelect(discord.ui.Select):
 
         embed = discord.Embed(
             title="📥 New Application",
-            color=discord.Color.orange()
+            color=discord.Color.orange(),
+            timestamp=discord.utils.utcnow()
         )
+
         embed.add_field(name="User", value=member.mention, inline=False)
         embed.add_field(name="Minecraft Name", value=self.username, inline=False)
         embed.add_field(name="Guild", value=guild_name, inline=False)
@@ -114,44 +114,43 @@ class GuildSelect(discord.ui.Select):
         )
 
         await interaction.response.send_message(
-            "Application submitted!",
+            "Application submitted successfully!",
             ephemeral=True
         )
-
 
 class GuildSelectView(discord.ui.View):
     def __init__(self, username):
         super().__init__(timeout=300)
         self.add_item(GuildSelect(username))
 
-
-# ----------------- APPLY BUTTON -----------------
+# ----------------- APPLY PANEL -----------------
 class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Apply", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="🚀 Apply", style=discord.ButtonStyle.green)
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(UsernameModal())
 
-    @discord.ui.button(label="ToS", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="📜 ToS", style=discord.ButtonStyle.blurple)
     async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="📜 Terms of Service",
             description=TOS_TEXT,
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
+            timestamp=discord.utils.utcnow()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="Privacy", style=discord.ButtonStyle.gray)
+    @discord.ui.button(label="🔐 Privacy", style=discord.ButtonStyle.gray)
     async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="🔐 Privacy Policy",
             description=PRIVACY_TEXT,
-            color=discord.Color.green()
+            color=discord.Color.green(),
+            timestamp=discord.utils.utcnow()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 # ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
@@ -175,17 +174,17 @@ class ReviewView(discord.ui.View):
 
         if log_channel:
             embed = discord.Embed(
-                title="✅ Accepted",
-                color=discord.Color.green()
+                title="✅ Application Accepted",
+                color=discord.Color.green(),
+                timestamp=discord.utils.utcnow()
             )
-            embed.add_field(name="User", value=member.mention)
+            embed.add_field(name="User", value=member.mention if member else "Unknown")
             embed.add_field(name="MC Name", value=self.mc_name)
             embed.add_field(name="Guild", value=self.guild_name)
 
             await log_channel.send(embed=embed)
 
         await interaction.message.delete()
-
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -195,8 +194,9 @@ class ReviewView(discord.ui.View):
 
         if log_channel:
             embed = discord.Embed(
-                title="❌ Denied",
-                color=discord.Color.red()
+                title="❌ Application Denied",
+                color=discord.Color.red(),
+                timestamp=discord.utils.utcnow()
             )
             embed.add_field(name="User", value=f"<@{self.member_id}>")
             embed.add_field(name="MC Name", value=self.mc_name)
@@ -206,56 +206,51 @@ class ReviewView(discord.ui.View):
 
         await interaction.message.delete()
 
-
-# ----------------- SLASH COMMAND -----------------
-@bot.tree.command(name="setup_application", description="Create application panel")
+# ----------------- SETUP COMMAND -----------------
+@bot.tree.command(name="setup_application", description="Create verification panel")
 async def setup_application(interaction: discord.Interaction):
 
     staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
 
-    if staff_role not in interaction.user.roles:
+    if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
         await interaction.response.send_message(
             "❌ You don't have permission to use this command.",
             ephemeral=True
         )
         return
-    
+
     embed = discord.Embed(
-        title="Verification",
-        description="Click Apply to verify.",
-        color=discord.Color.blurple()
+        title="🛡️ Verification Center",
+        description=(
+            "Welcome to the verification system.\n\n"
+            "Click **Apply** to start your application.\n"
+            "Read ToS and Privacy before continuing."
+        ),
+        color=discord.Color.blurple(),
+        timestamp=discord.utils.utcnow()
     )
+
+    embed.set_author(
+        name="Verification System",
+        icon_url=interaction.guild.icon.url if interaction.guild.icon else None
+    )
+
+    embed.set_thumbnail(
+        url=interaction.guild.icon.url if interaction.guild.icon else None
+    )
+
+    embed.set_footer(text="Secure system • All actions are logged")
 
     await interaction.channel.send(embed=embed, view=ApplyView())
     await interaction.response.send_message("Panel created!", ephemeral=True)
 
-@bot.tree.command(name="tos", description="Show Terms of Service", guild=discord.Object(id=GUILD_ID))
-async def tos(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="📜 Terms of Service",
-        description=TOS_TEXT,
-        color=discord.Color.blurple()
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-@bot.tree.command(name="privacy", description="Show Privacy Policy", guild=discord.Object(id=GUILD_ID))
-async def privacy(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="🔐 Privacy Policy",
-        description=PRIVACY_TEXT,
-        color=discord.Color.green()
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-# ----------------- SYNC FIX -----------------
-
+# ----------------- READY EVENT -----------------
 @bot.event
 async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
         synced = await bot.tree.sync(guild=guild)
-        print(f"Synced {len(synced)} commands (guild)")
+        print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
 
