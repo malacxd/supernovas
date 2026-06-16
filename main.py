@@ -154,29 +154,32 @@ class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="🚀 Apply", style=discord.ButtonStyle.green)
+class ApplyView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="🚀 Apply",
+        style=discord.ButtonStyle.green,
+        custom_id="apply_button"
+    )
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(UsernameModal())
 
-    @discord.ui.button(label="📜 ToS", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(
+        label="📜 ToS",
+        style=discord.ButtonStyle.blurple,
+        custom_id="tos_button"
+    )
     async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="📜 Terms of Service",
-            description=TOS_TEXT,
-            color=discord.Color.blurple(),
-            timestamp=discord.utils.utcnow()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    @discord.ui.button(label="🔐 Privacy", style=discord.ButtonStyle.gray)
+        ...
+    
+    @discord.ui.button(
+        label="🔐 Privacy",
+        style=discord.ButtonStyle.gray,
+        custom_id="privacy_button"
+    )
     async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="🔐 Privacy Policy",
-            description=PRIVACY_TEXT,
-            color=discord.Color.green(),
-            timestamp=discord.utils.utcnow()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
