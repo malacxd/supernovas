@@ -1,6 +1,8 @@
 import os
 import discord
 from discord.ext import commands
+import asyncio
+import itertools
 
 # ----------------- TEXTS -----------------
 TOS_TEXT = """
@@ -55,6 +57,11 @@ GUILD_ROLES = {
     "GLN": 1516167020847042580
 }
 
+app_count = 0
+accepted_count = 0
+denied_count = 0
+last_activity = "idle"
+
 # ----------------- MODAL -----------------
 class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
 
@@ -91,6 +98,10 @@ class GuildSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+
+        global app_count, last_activity
+        app_count += 1
+        last_activity = "application"
 
         guild_name = self.values[0]
         member = interaction.user
@@ -162,6 +173,9 @@ class ReviewView(discord.ui.View):
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        global accepted_count, last_activity
+        accepted_count += 1
+        last_activity = "accepted"
         await interaction.response.defer()
 
         member = interaction.guild.get_member(self.member_id)
@@ -199,6 +213,9 @@ class ReviewView(discord.ui.View):
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
+        global denied_count, last_activity
+        denied_count += 1
+        last_activity = "denied"
         await interaction.response.defer()
 
         member = interaction.guild.get_member(self.member_id)
@@ -277,12 +294,20 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
-    await bot.change_presence(
-    status=discord.Status.idle,
-        activity=discord.Game(name="Wynncraft")
-    )
-
     print(f"Logged in as {bot.user}")
+    while True:
+        activity = discord.Activity(
+            type=discord.ActivityType.watching,
+            name=f"📥 {app_count} apps • ✅ {accepted_count} • ❌ {denied_count}"
+        )
+
+        await bot.change_presence(
+            status=discord.Status.online,
+            activity=activity
+        )
+
+        await asyncio.sleep(10)
+
 
 # ----------------- RUN BOT -----------------
 bot.run(os.getenv("DISCORD_TOKEN"))
