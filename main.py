@@ -72,6 +72,7 @@ def load_stats():
         }
 
 stats = load_stats()
+stats.setdefault("applications", {})
 
 def save_stats():
     with open(DATA_FILE, "w") as f:
@@ -112,42 +113,46 @@ class GuildSelect(discord.ui.Select):
             options=options
         )
 
-    async def callback(self, interaction: discord.Interaction):
+async def callback(self, interaction: discord.Interaction):
 
-        global app_count, last_activity
-        stats["app_count"] += 1
-        save_stats()
+    app_id = str(stats["app_count"])
+    stats["app_count"] += 1
 
-        guild_name = self.values[0]
-        member = interaction.user
+    stats["applications"][app_id] = {
+        "user_id": interaction.user.id,
+        "mc_name": self.username,
+        "guild": self.values[0]
+    }
 
-        staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+    save_stats()
 
-        embed = discord.Embed(
-            title="📥 New Application",
-            color=discord.Color.orange(),
-            timestamp=discord.utils.utcnow()
-        )
+    guild_name = self.values[0]
+    member = interaction.user
 
-        embed.add_field(name="User", value=member.mention, inline=False)
-        embed.add_field(name="Minecraft Name", value=self.username, inline=False)
-        embed.add_field(name="Guild", value=guild_name, inline=False)
+    staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
 
-        await staff_channel.send(
-            content=f"<@&{STAFF_ROLE_ID}>",
-            embed=embed,
-            view=ReviewView(member.id, self.username, guild_name)
-        )
+    embed = discord.Embed(
+        title=f"📥 New Application #{app_id}",
+        color=discord.Color.orange(),
+        timestamp=discord.utils.utcnow()
+    )
 
-        await interaction.response.send_message(
-            "Application submitted successfully!",
-            ephemeral=True
-        )
+    embed.add_field(name="User", value=member.mention, inline=False)
+    embed.add_field(name="Minecraft Name", value=self.username, inline=False)
+    embed.add_field(name="Guild", value=guild_name, inline=False)
 
-class GuildSelectView(discord.ui.View):
-    def __init__(self, username):
-        super().__init__(timeout=300)
-        self.add_item(GuildSelect(username))
+    await staff_channel.send(
+        content=f"<@&{STAFF_ROLE_ID}>",
+        embed=embed,
+        view=AppActionView(app_id)
+    )
+
+    save_stats()
+
+    await interaction.response.send_message(
+        "Application submitted successfully!",
+        ephemeral=True
+    )
 
 # ----------------- APPLY PANEL -----------------
 class ApplyView(discord.ui.View):
@@ -189,55 +194,71 @@ class ApplyView(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ----------------- REVIEW SYSTEM -----------------
-class ReviewView(discord.ui.View):
-    def __init__(self, member_id, mc_name, guild_name):
+class AppActionView(discord.ui.View):
+    def __init__(self, app_id: str):
         super().__init__(timeout=None)
-        self.member_id = member_id
-        self.mc_name = mc_name
-        self.guild_name = guild_name
+        self.app_id = app_id
 
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
+    @discord.ui.button(
+        label="Accept",
+        style=discord.ButtonStyle.green,
+        custom_id="accept_button"
+    )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
 
-        member = interaction.guild.get_member(self.member_id)
-        role = interaction.guild.get_role(GUILD_ROLES[self.guild_name])
+        data = stats["applications"].get(self.app_id)
+
+        if not data:
+            await interaction.response.send_message("Application not found.", ephemeral=True)
+            return
+
+        member = interaction.guild.get_member(data["user_id"])
+        role = interaction.guild.get_role(GUILD_ROLES[data["guild"]])
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
         if member and role:
-            await member.edit(nick=self.mc_name)
+            await member.edit(nick=data["mc_name"])
             await member.add_roles(role)
 
             try:
                 await member.send(
                     embed=discord.Embed(
                         title="✅ Application Accepted",
-                        description=f"You were accepted into **{self.guild_name}**",
+                        description=f"You were accepted into **{data['guild']}**",
                         color=discord.Color.green()
                     )
                 )
-            except discord.Forbidden:
+            except:
                 pass
 
         if log_channel:
             embed = discord.Embed(
-                title="✅ Accepted",
+                title=f"✅ Accepted #{self.app_id}",
                 color=discord.Color.green(),
                 timestamp=discord.utils.utcnow()
             )
             embed.add_field(name="User", value=member.mention if member else "Unknown")
-            embed.add_field(name="MC Name", value=self.mc_name)
-            embed.add_field(name="Guild", value=self.guild_name)
+            embed.add_field(name="MC Name", value=data["mc_name"])
+            embed.add_field(name="Guild", value=data["guild"])
 
             await log_channel.send(embed=embed)
 
         await interaction.message.delete()
 
-    @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
+    @discord.ui.button(
+        label="Deny",
+        style=discord.ButtonStyle.red,
+        custom_id="deny_button"
+    )
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
 
-        member = interaction.guild.get_member(self.member_id)
+        data = stats["applications"].get(self.app_id)
+
+        if not data:
+            await interaction.response.send_message("Application not found.", ephemeral=True)
+            return
+
+        member = interaction.guild.get_member(data["user_id"])
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
         if member:
@@ -249,18 +270,18 @@ class ReviewView(discord.ui.View):
                         color=discord.Color.red()
                     )
                 )
-            except discord.Forbidden:
+            except:
                 pass
 
         if log_channel:
             embed = discord.Embed(
-                title="❌ Denied",
+                title=f"❌ Denied #{self.app_id}",
                 color=discord.Color.red(),
                 timestamp=discord.utils.utcnow()
             )
-            embed.add_field(name="User", value=f"<@{self.member_id}>")
-            embed.add_field(name="MC Name", value=self.mc_name)
-            embed.add_field(name="Guild", value=self.guild_name)
+            embed.add_field(name="User", value=f"<@{data['user_id']}>")
+            embed.add_field(name="MC Name", value=data["mc_name"])
+            embed.add_field(name="Guild", value=data["guild"])
 
             await log_channel.send(embed=embed)
 
@@ -313,10 +334,17 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
+
     print(f"Logged in as {bot.user}")
+
+    # register ALL possible persistent views
     bot.add_view(ApplyView())
 
     print("Views re-registered")
+
+    # 🧠 recovery scan
+    for app_id, data in stats.get("applications", {}).items():
+        print(f"Loaded application #{app_id} for {data['mc_name']}")
     while True:
 
         # 1) Apps counter status
