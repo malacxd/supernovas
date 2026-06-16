@@ -302,7 +302,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name=f"📥 {app_count} applications"
+                name=f"{app_count} applications"
             )
         )
         await asyncio.sleep(10)
@@ -312,7 +312,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="verification System"
+                name="verification system"
             )
         )
         await asyncio.sleep(10)
@@ -322,7 +322,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.playing,
-                name="managing guilds"
+                name="beating Anathema"
             )
         )
         await asyncio.sleep(10)
@@ -332,7 +332,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name="staff decisions"
+                name="join tdbd"
             )
         )
         await asyncio.sleep(10)
