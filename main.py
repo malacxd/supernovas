@@ -277,6 +277,13 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
+    await bot.change_presence(
+    status=discord.Status.idle,
+    activity=discord.Activity(
+        type=discord.ActivityType.listening,
+        name="ur mom"
+    )
+)
 
     print(f"Logged in as {bot.user}")
 
