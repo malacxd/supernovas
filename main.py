@@ -154,33 +154,45 @@ class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-class ApplyView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(
+            label="🚀 Apply",
+            style=discord.ButtonStyle.green,
+            custom_id="apply_button"
+        ))
 
-    @discord.ui.button(
-        label="🚀 Apply",
-        style=discord.ButtonStyle.green,
-        custom_id="apply_button"
-    )
+        self.add_item(discord.ui.Button(
+            label="📜 ToS",
+            style=discord.ButtonStyle.blurple,
+            custom_id="tos_button"
+        ))
+
+        self.add_item(discord.ui.Button(
+            label="🔐 Privacy",
+            style=discord.ButtonStyle.gray,
+            custom_id="privacy_button"
+        ))
+
+    @discord.ui.button(custom_id="apply_button")
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(UsernameModal())
 
-    @discord.ui.button(
-        label="📜 ToS",
-        style=discord.ButtonStyle.blurple,
-        custom_id="tos_button"
-    )
+    @discord.ui.button(custom_id="tos_button")
     async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(UsernameModal())
-    
-    @discord.ui.button(
-        label="🔐 Privacy",
-        style=discord.ButtonStyle.gray,
-        custom_id="privacy_button"
-    )
+        embed = discord.Embed(
+            title="📜 Terms of Service",
+            description=TOS_TEXT,
+            color=discord.Color.blurple()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(custom_id="privacy_button")
     async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(UsernameModal())
+        embed = discord.Embed(
+            title="🔐 Privacy Policy",
+            description=PRIVACY_TEXT,
+            color=discord.Color.green()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
