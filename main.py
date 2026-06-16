@@ -241,6 +241,7 @@ async def on_ready():
         print(e)
 
     print(f"Logged in as {bot.user}")
+    print("COMMANDS:", bot.tree.get_commands())
 
 # ----------------- RUN BOT -----------------
 bot.run(os.getenv("DISCORD_TOKEN"))
