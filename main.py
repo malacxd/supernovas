@@ -58,7 +58,6 @@ GUILD_ROLES = {
     "GLN": 1516167020847042580
 }
 
-# stats["app_count"]
 DATA_FILE = "stats.json"
 last_activity = "idle"
 
@@ -118,64 +117,54 @@ class GuildSelect(discord.ui.Select):
             options=options
         )
 
-async def callback(self, interaction: discord.Interaction):
-    print("SELECT WORKED")
-    print(self.values)
-    print(interaction.user)
+    async def callback(self, interaction: discord.Interaction):
 
-    try:
-        # ⚡ MUST respond immediately
-        await interaction.response.defer(ephemeral=True)
-
-        app_id = str(stats["app_count"])
-        stats["app_count"] += 1
-
-        stats.setdefault("applications", {})
-
-        guild_name = self.values[0]
-
-        stats["applications"][app_id] = {
-            "user_id": interaction.user.id,
-            "mc_name": self.username,
-            "guild": guild_name
-        }
-
-        save_stats()
-
-        staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
-
-        if staff_channel is None:
-            await interaction.followup.send("Staff channel not found.", ephemeral=True)
-            return
-
-        embed = discord.Embed(
-            title=f"📥 Application #{app_id}",
-            color=discord.Color.orange(),
-            timestamp=discord.utils.utcnow()
-        )
-
-        embed.add_field(name="User", value=interaction.user.mention, inline=False)
-        embed.add_field(name="MC Name", value=self.username, inline=False)
-        embed.add_field(name="Guild", value=guild_name, inline=False)
-
-        await staff_channel.send(embed=embed)
-
-        # ⚡ MUST use followup after defer
-        await interaction.followup.send(
-            "✅ Application submitted successfully!",
-            ephemeral=True
-        )
-
-    except Exception as e:
-        print("❌ GuildSelect crash:", e)
+        print("SELECT WORKED")
+        print(self.values)
 
         try:
+            await interaction.response.defer(ephemeral=True)
+
+            app_id = str(stats["app_count"])
+            stats["app_count"] += 1
+
+            stats.setdefault("applications", {})
+
+            guild_name = self.values[0]
+
+            stats["applications"][app_id] = {
+                "user_id": interaction.user.id,
+                "mc_name": self.username,
+                "guild": guild_name
+            }
+
+            save_stats()
+
+            staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+
+            if staff_channel is None:
+                await interaction.followup.send("Staff channel not found.", ephemeral=True)
+                return
+
+            embed = discord.Embed(
+                title=f"📥 Application #{app_id}",
+                color=discord.Color.orange(),
+                timestamp=discord.utils.utcnow()
+            )
+
+            embed.add_field(name="User", value=interaction.user.mention, inline=False)
+            embed.add_field(name="MC Name", value=self.username, inline=False)
+            embed.add_field(name="Guild", value=guild_name, inline=False)
+
+            await staff_channel.send(embed=embed)
+
             await interaction.followup.send(
-                "Something broke in guild selection.",
+                "✅ Application submitted successfully!",
                 ephemeral=True
             )
-        except:
-            pass
+
+        except Exception as e:
+            print("❌ GuildSelect crash:", e)
 # ----------------- APPLY PANEL -----------------
 class ApplyView(discord.ui.View):
     def __init__(self):
