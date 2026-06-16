@@ -97,7 +97,7 @@ class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
 # ----------------- GUILD SELECT -----------------
 class GuildSelectView(discord.ui.View):
     def __init__(self, username):
-        super().__init__(timeout=300)
+        super().__init__(timeout=180)
         self.add_item(GuildSelect(username))
 
 class GuildSelect(discord.ui.Select):
@@ -121,50 +121,52 @@ class GuildSelect(discord.ui.Select):
 async def callback(self, interaction: discord.Interaction):
 
     try:
-        print("🔥 Select clicked")
+        await interaction.response.defer(ephemeral=True)
 
         app_id = str(stats["app_count"])
         stats["app_count"] += 1
 
-        print("App ID:", app_id)
+        stats.setdefault("applications", {})
 
         guild_name = self.values[0]
-        print("Guild:", guild_name)
 
-        member = interaction.user
-        print("User:", member)
+        stats["applications"][app_id] = {
+            "user_id": interaction.user.id,
+            "mc_name": self.username,
+            "guild": guild_name
+        }
+
+        save_stats()
 
         staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
-        print("Staff channel:", staff_channel)
 
         if staff_channel is None:
-            print("❌ Staff channel is NONE (wrong ID or missing access)")
+            await interaction.followup.send("Staff channel not found.", ephemeral=True)
+            return
 
         embed = discord.Embed(
-            title=f"📥 New Application #{app_id}",
-            color=discord.Color.orange()
+            title=f"📥 Application #{app_id}",
+            color=discord.Color.orange(),
+            timestamp=discord.utils.utcnow()
         )
 
-        embed.add_field(name="User", value=member.mention)
+        embed.add_field(name="User", value=interaction.user.mention)
         embed.add_field(name="MC Name", value=self.username)
         embed.add_field(name="Guild", value=guild_name)
 
         await staff_channel.send(embed=embed)
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "Application submitted successfully!",
             ephemeral=True
         )
 
-        print("✅ Application sent successfully")
-
     except Exception as e:
-        print("❌ ERROR IN SELECT CALLBACK:")
-        print(e)
+        print("❌ GuildSelect error:", e)
 
         try:
-            await interaction.response.send_message(
-                "Something broke. Check bot console.",
+            await interaction.followup.send(
+                "Something went wrong in guild selection.",
                 ephemeral=True
             )
         except:
@@ -174,13 +176,17 @@ class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(
-        label="🚀 Apply",
-        style=discord.ButtonStyle.green,
-        custom_id="apply_button"
-    )
-    async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
+@discord.ui.button(
+    label="🚀 Apply",
+    style=discord.ButtonStyle.green,
+    custom_id="apply_button"
+)
+async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    try:
         await interaction.response.send_modal(UsernameModal())
+    except discord.errors.NotFound:
+        print("Interaction expired before modal could be sent")
 
     @discord.ui.button(
         label="📜 ToS",
