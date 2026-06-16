@@ -317,7 +317,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name=f"{app_count} applications"
+                name=f"{stats['app_count']} applications"
             )
         )
         await asyncio.sleep(30)
