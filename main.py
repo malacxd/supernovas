@@ -161,50 +161,84 @@ class ReviewView(discord.ui.View):
         self.guild_name = guild_name
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
-    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await interaction.response.defer()
 
-        member = interaction.guild.get_member(self.member_id)
-        role = interaction.guild.get_role(GUILD_ROLES[self.guild_name])
-        log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
+    member = interaction.guild.get_member(self.member_id)
+    role = interaction.guild.get_role(GUILD_ROLES[self.guild_name])
+    log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
-        if member and role:
-            await member.edit(nick=self.mc_name)
-            await member.add_roles(role)
+    # Add role + nickname
+    if member and role:
+        await member.edit(nick=self.mc_name)
+        await member.add_roles(role)
 
-        if log_channel:
-            embed = discord.Embed(
+        # AUTO DM (ACCEPTED)
+        try:
+            dm_embed = discord.Embed(
                 title="✅ Application Accepted",
-                color=discord.Color.green(),
-                timestamp=discord.utils.utcnow()
+                description=(
+                    f"You’ve been accepted.\n\n"
+                    f"**Guild:** {self.guild_name}\n"
+                    f"**Minecraft Name:** {self.mc_name}"
+                ),
+                color=discord.Color.green()
             )
-            embed.add_field(name="User", value=member.mention if member else "Unknown")
-            embed.add_field(name="MC Name", value=self.mc_name)
-            embed.add_field(name="Guild", value=self.guild_name)
+            await member.send(embed=dm_embed)
+        except discord.Forbidden:
+            pass  # user has DMs closed
 
-            await log_channel.send(embed=embed)
+    # LOG
+    if log_channel:
+        embed = discord.Embed(
+            title="✅ Application Accepted",
+            color=discord.Color.green(),
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="User", value=member.mention if member else "Unknown", inline=False)
+        embed.add_field(name="MC Name", value=self.mc_name, inline=False)
+        embed.add_field(name="Guild", value=self.guild_name, inline=False)
 
-        await interaction.message.delete()
+        await log_channel.send(embed=embed)
+
+    await interaction.message.delete()
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
-    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await interaction.response.defer()
 
-        log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
+    member = interaction.guild.get_member(self.member_id)
+    log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
-        if log_channel:
-            embed = discord.Embed(
+    # AUTO DM (DENIED)
+    if member:
+        try:
+            dm_embed = discord.Embed(
                 title="❌ Application Denied",
-                color=discord.Color.red(),
-                timestamp=discord.utils.utcnow()
+                description=(
+                    "Unfortunately, your application was not accepted.\n\n"
+                    "You may reapply later if allowed."
+                ),
+                color=discord.Color.red()
             )
-            embed.add_field(name="User", value=f"<@{self.member_id}>")
-            embed.add_field(name="MC Name", value=self.mc_name)
-            embed.add_field(name="Guild", value=self.guild_name)
+            await member.send(embed=dm_embed)
+        except discord.Forbidden:
+            pass
 
-            await log_channel.send(embed=embed)
+    # LOG
+    if log_channel:
+        embed = discord.Embed(
+            title="❌ Application Denied",
+            color=discord.Color.red(),
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="User", value=f"<@{self.member_id}>", inline=False)
+        embed.add_field(name="MC Name", value=self.mc_name, inline=False)
+        embed.add_field(name="Guild", value=self.guild_name, inline=False)
 
-        await interaction.message.delete()
+        await log_channel.send(embed=embed)
+
+    await interaction.message.delete()
 
 # ----------------- SETUP COMMAND -----------------
 @bot.tree.command(name="setup_application", description="Create verification panel")
