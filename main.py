@@ -121,31 +121,33 @@ class GuildSelect(discord.ui.Select):
 async def callback(self, interaction: discord.Interaction):
 
     try:
+        print("🔥 Select clicked")
+
         app_id = str(stats["app_count"])
         stats["app_count"] += 1
 
-        stats["applications"][app_id] = {
-            "user_id": interaction.user.id,
-            "mc_name": self.username,
-            "guild": self.values[0]
-        }
-
-        save_stats()
+        print("App ID:", app_id)
 
         guild_name = self.values[0]
+        print("Guild:", guild_name)
+
         member = interaction.user
+        print("User:", member)
 
         staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+        print("Staff channel:", staff_channel)
+
+        if staff_channel is None:
+            print("❌ Staff channel is NONE (wrong ID or missing access)")
 
         embed = discord.Embed(
             title=f"📥 New Application #{app_id}",
-            color=discord.Color.orange(),
-            timestamp=discord.utils.utcnow()
+            color=discord.Color.orange()
         )
 
-        embed.add_field(name="User", value=member.mention, inline=False)
-        embed.add_field(name="Minecraft Name", value=self.username, inline=False)
-        embed.add_field(name="Guild", value=guild_name, inline=False)
+        embed.add_field(name="User", value=member.mention)
+        embed.add_field(name="MC Name", value=self.username)
+        embed.add_field(name="Guild", value=guild_name)
 
         await staff_channel.send(embed=embed)
 
@@ -154,13 +156,19 @@ async def callback(self, interaction: discord.Interaction):
             ephemeral=True
         )
 
-    except Exception as e:
-        print("Select error:", e)
-        await interaction.response.send_message(
-            "Something went wrong. Try again.",
-            ephemeral=True
-        )
+        print("✅ Application sent successfully")
 
+    except Exception as e:
+        print("❌ ERROR IN SELECT CALLBACK:")
+        print(e)
+
+        try:
+            await interaction.response.send_message(
+                "Something broke. Check bot console.",
+                ephemeral=True
+            )
+        except:
+            pass
 # ----------------- APPLY PANEL -----------------
 class ApplyView(discord.ui.View):
     def __init__(self):
