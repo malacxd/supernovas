@@ -279,9 +279,7 @@ async def on_ready():
         print(e)
     await bot.change_presence(
     status=discord.Status.idle,
-    activity=discord.Activity(
-        type=discord.ActivityType.listening,
-        name="ur mom"
+        activity=discord.Game(name="Wynncraft")
     )
 )
 
