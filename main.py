@@ -299,7 +299,7 @@ async def on_ready():
 
         # 1) Apps counter status
         await bot.change_presence(
-            status=discord.Status.online,
+            status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
                 name=f"📥 {app_count} applications"
@@ -309,7 +309,7 @@ async def on_ready():
 
         # 2) General system status
         await bot.change_presence(
-            status=discord.Status.online,
+            status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
                 name="verification System"
@@ -319,7 +319,7 @@ async def on_ready():
 
         # 3) Guild management
         await bot.change_presence(
-            status=discord.Status.online,
+            status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.playing,
                 name="managing guilds"
@@ -329,7 +329,7 @@ async def on_ready():
 
         # 4) Staff activity vibe
         await bot.change_presence(
-            status=discord.Status.online,
+            status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
                 name="staff decisions"
