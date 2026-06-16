@@ -310,6 +310,9 @@ async def on_ready():
     except Exception as e:
         print(e)
     print(f"Logged in as {bot.user}")
+    bot.add_view(ApplyView())
+
+    print("Views re-registered")
     while True:
 
         # 1) Apps counter status
