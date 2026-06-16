@@ -2,6 +2,39 @@ import os
 import discord
 from discord.ext import commands
 
+TOS_TEXT = """
+📜 TERMS OF SERVICE
+
+1. By using the application system, you agree to follow server rules.
+2. You must provide accurate Minecraft username information.
+3. Spamming or abusing the application system is not allowed.
+4. Staff decisions (accept/deny) are final.
+5. Your data (username + guild choice) is stored for moderation purposes.
+6. Misuse may result in denial or blacklist.
+
+Last updated: 2026-06-16
+"""
+
+PRIVACY_TEXT = """
+🔐 PRIVACY POLICY
+
+We collect:
+- Discord User ID
+- Minecraft username
+- Selected guild
+- Application decisions (accepted/denied)
+
+We use this data only for:
+- Verification
+- Role assignment
+- Moderation logging
+
+Data is stored in Discord channels (staff + logs).
+We do not sell or share your data externally.
+
+Last updated: 2026-06-16
+"""
+
 # ----------------- INTENTS -----------------
 intents = discord.Intents.default()
 intents.members = True
@@ -177,6 +210,24 @@ async def setup_application(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed, view=ApplyView())
     await interaction.response.send_message("Panel created!", ephemeral=True)
+
+@bot.tree.command(name="tos", description="Show Terms of Service")
+async def tos(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="📜 Terms of Service",
+        description=TOS_TEXT,
+        color=discord.Color.blurple()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="privacy", description="Show Privacy Policy")
+async def privacy(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🔐 Privacy Policy",
+        description=PRIVACY_TEXT,
+        color=discord.Color.green()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ----------------- SYNC FIX -----------------
