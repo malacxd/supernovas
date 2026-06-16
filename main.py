@@ -198,9 +198,6 @@ class ReviewView(discord.ui.View):
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        global accepted_count, last_activity
-        accepted_count += 1
-        last_activity = "accepted"
         await interaction.response.defer()
 
         member = interaction.guild.get_member(self.member_id)
@@ -238,9 +235,6 @@ class ReviewView(discord.ui.View):
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        global denied_count, last_activity
-        denied_count += 1
-        last_activity = "denied"
         await interaction.response.defer()
 
         member = interaction.guild.get_member(self.member_id)
