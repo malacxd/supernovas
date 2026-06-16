@@ -172,7 +172,7 @@ class ApplyView(discord.ui.View):
         custom_id="tos_button"
     )
     async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
-        ...
+        await interaction.response.send_modal(UsernameModal())
     
     @discord.ui.button(
         label="🔐 Privacy",
@@ -180,6 +180,7 @@ class ApplyView(discord.ui.View):
         custom_id="privacy_button"
     )
     async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(UsernameModal())
 
 # ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
