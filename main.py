@@ -119,8 +119,12 @@ class GuildSelect(discord.ui.Select):
         )
 
 async def callback(self, interaction: discord.Interaction):
+    print("SELECT WORKED")
+    print(self.values)
+    print(interaction.user)
 
     try:
+        # ⚡ MUST respond immediately
         await interaction.response.defer(ephemeral=True)
 
         app_id = str(stats["app_count"])
@@ -150,23 +154,24 @@ async def callback(self, interaction: discord.Interaction):
             timestamp=discord.utils.utcnow()
         )
 
-        embed.add_field(name="User", value=interaction.user.mention)
-        embed.add_field(name="MC Name", value=self.username)
-        embed.add_field(name="Guild", value=guild_name)
+        embed.add_field(name="User", value=interaction.user.mention, inline=False)
+        embed.add_field(name="MC Name", value=self.username, inline=False)
+        embed.add_field(name="Guild", value=guild_name, inline=False)
 
         await staff_channel.send(embed=embed)
 
+        # ⚡ MUST use followup after defer
         await interaction.followup.send(
-            "Application submitted successfully!",
+            "✅ Application submitted successfully!",
             ephemeral=True
         )
 
     except Exception as e:
-        print("❌ GuildSelect error:", e)
+        print("❌ GuildSelect crash:", e)
 
         try:
             await interaction.followup.send(
-                "Something went wrong in guild selection.",
+                "Something broke in guild selection.",
                 ephemeral=True
             )
         except:
