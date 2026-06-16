@@ -95,6 +95,11 @@ class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
         )
 
 # ----------------- GUILD SELECT -----------------
+class GuildSelectView(discord.ui.View):
+    def __init__(self, username):
+        super().__init__(timeout=300)
+        self.add_item(GuildSelect(username))
+
 class GuildSelect(discord.ui.Select):
 
     def __init__(self, username):
