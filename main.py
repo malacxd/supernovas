@@ -120,44 +120,46 @@ class GuildSelect(discord.ui.Select):
 
 async def callback(self, interaction: discord.Interaction):
 
-    app_id = str(stats["app_count"])
-    stats["app_count"] += 1
+    try:
+        app_id = str(stats["app_count"])
+        stats["app_count"] += 1
 
-    stats["applications"][app_id] = {
-        "user_id": interaction.user.id,
-        "mc_name": self.username,
-        "guild": self.values[0]
-    }
+        stats["applications"][app_id] = {
+            "user_id": interaction.user.id,
+            "mc_name": self.username,
+            "guild": self.values[0]
+        }
 
-    save_stats()
+        save_stats()
 
-    guild_name = self.values[0]
-    member = interaction.user
+        guild_name = self.values[0]
+        member = interaction.user
 
-    staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+        staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
 
-    embed = discord.Embed(
-        title=f"📥 New Application #{app_id}",
-        color=discord.Color.orange(),
-        timestamp=discord.utils.utcnow()
-    )
+        embed = discord.Embed(
+            title=f"📥 New Application #{app_id}",
+            color=discord.Color.orange(),
+            timestamp=discord.utils.utcnow()
+        )
 
-    embed.add_field(name="User", value=member.mention, inline=False)
-    embed.add_field(name="Minecraft Name", value=self.username, inline=False)
-    embed.add_field(name="Guild", value=guild_name, inline=False)
+        embed.add_field(name="User", value=member.mention, inline=False)
+        embed.add_field(name="Minecraft Name", value=self.username, inline=False)
+        embed.add_field(name="Guild", value=guild_name, inline=False)
 
-    await staff_channel.send(
-        content=f"<@&{STAFF_ROLE_ID}>",
-        embed=embed,
-        view=AppActionView(app_id)
-    )
+        await staff_channel.send(embed=embed)
 
-    save_stats()
+        await interaction.response.send_message(
+            "Application submitted successfully!",
+            ephemeral=True
+        )
 
-    await interaction.response.send_message(
-        "Application submitted successfully!",
-        ephemeral=True
-    )
+    except Exception as e:
+        print("Select error:", e)
+        await interaction.response.send_message(
+            "Something went wrong. Try again.",
+            ephemeral=True
+        )
 
 # ----------------- APPLY PANEL -----------------
 class ApplyView(discord.ui.View):
