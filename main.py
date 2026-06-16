@@ -296,16 +296,45 @@ async def on_ready():
         print(e)
     print(f"Logged in as {bot.user}")
     while True:
-        activity = discord.Activity(
-            type=discord.ActivityType.watching,
-            name=f"📥 {app_count} apps • ✅ {accepted_count} • ❌ {denied_count}"
-        )
 
+        # 1) Apps counter status
         await bot.change_presence(
             status=discord.Status.online,
-            activity=activity
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name=f"📥 {app_count} applications"
+            )
         )
+        await asyncio.sleep(10)
 
+        # 2) General system status
+        await bot.change_presence(
+            status=discord.Status.online,
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="verification System"
+            )
+        )
+        await asyncio.sleep(10)
+
+        # 3) Guild management
+        await bot.change_presence(
+            status=discord.Status.online,
+            activity=discord.Activity(
+                type=discord.ActivityType.playing,
+                name="managing guilds"
+            )
+        )
+        await asyncio.sleep(10)
+
+        # 4) Staff activity vibe
+        await bot.change_presence(
+            status=discord.Status.online,
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name="staff decisions"
+            )
+        )
         await asyncio.sleep(10)
 
 
