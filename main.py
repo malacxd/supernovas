@@ -134,6 +134,24 @@ class ApplyView(discord.ui.View):
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(UsernameModal())
 
+    @discord.ui.button(label="ToS", style=discord.ButtonStyle.blurple)
+    async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="📜 Terms of Service",
+            description=TOS_TEXT,
+            color=discord.Color.blurple()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="Privacy", style=discord.ButtonStyle.gray)
+    async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="🔐 Privacy Policy",
+            description=PRIVACY_TEXT,
+            color=discord.Color.green()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 # ----------------- REVIEW SYSTEM -----------------
 class ReviewView(discord.ui.View):
