@@ -176,43 +176,23 @@ class ApplyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-@discord.ui.button(
-    label="🚀 Apply",
-    style=discord.ButtonStyle.green,
-    custom_id="apply_button"
-)
-async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-    try:
+    @discord.ui.button(label="🚀 Apply", style=discord.ButtonStyle.green, custom_id="apply_button")
+    async def apply(self, interaction, button):
         await interaction.response.send_modal(UsernameModal())
-    except discord.errors.NotFound:
-        print("Interaction expired before modal could be sent")
 
-    @discord.ui.button(
-        label="📜 ToS",
-        style=discord.ButtonStyle.blurple,
-        custom_id="tos_button"
-    )
-    async def tos(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="📜 Terms of Service",
-            description=TOS_TEXT,
-            color=discord.Color.blurple()
+    @discord.ui.button(label="📜 ToS", style=discord.ButtonStyle.blurple, custom_id="tos_button")
+    async def tos(self, interaction, button):
+        await interaction.response.send_message(
+            embed=discord.Embed(title="ToS", description=TOS_TEXT),
+            ephemeral=True
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(
-        label="🔐 Privacy",
-        style=discord.ButtonStyle.gray,
-        custom_id="privacy_button"
-    )
-    async def privacy(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="🔐 Privacy Policy",
-            description=PRIVACY_TEXT,
-            color=discord.Color.green()
+    @discord.ui.button(label="🔐 Privacy", style=discord.ButtonStyle.gray, custom_id="privacy_button")
+    async def privacy(self, interaction, button):
+        await interaction.response.send_message(
+            embed=discord.Embed(title="Privacy", description=PRIVACY_TEXT),
+            ephemeral=True
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ----------------- REVIEW SYSTEM -----------------
 class AppActionView(discord.ui.View):
