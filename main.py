@@ -53,6 +53,7 @@ LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516487564473798806
 RAID_PANEL_CHANNEL_ID = 1516508845902397521
 RAID_PARTY_CHANNEL_ID = 1517133054630559965
+pending_closures = {}
 
 GUILD_ROLES = {
     "TDbD": 1516166981550866644,
@@ -437,6 +438,18 @@ class ClassSelect(discord.ui.Select):
             ephemeral=True
         )
 
+async def start_close_confirmation(interaction, party_id):
+
+    pending_closures[party_id] = interaction.user.id
+
+    view = ClosePartyView(party_id)
+
+    await interaction.response.send_message(
+        "⚠️ You are the leader. Closing will delete the party.\nAre you sure?",
+        view=view,
+        ephemeral=True
+    )
+
 class ClassSelectView(discord.ui.View):
     def __init__(self, raid):
         super().__init__(timeout=300)
@@ -466,26 +479,114 @@ def build_party_embed(party_id):
 
     return embed
 
+class ClosePartyView(discord.ui.View):
+    def __init__(self, party_id):
+        super().__init__(timeout=30)
+        self.party_id = party_id
+
+    @discord.ui.button(label="Confirm Close", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction, button):
+
+        party = parties.get(self.party_id)
+        if not party:
+            return await interaction.response.send_message("Party already closed.", ephemeral=True)
+
+        if interaction.user.id != party["leader"]:
+            return await interaction.response.send_message("Only leader can close.", ephemeral=True)
+
+        parties.pop(self.party_id, None)
+        save_parties()
+
+        pending_closures.pop(self.party_id, None)
+
+        await interaction.response.edit_message(
+            content="❌ Party closed.",
+            view=None
+        )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+
+        pending_closures.pop(self.party_id, None)
+
+        await interaction.response.edit_message(
+            content="Cancelled.",
+            view=None
+        )
+
+class JoinClass(discord.ui.Select):
+    def __init__(self, party_id):
+        self.party_id = party_id
+
+        options = [
+            discord.SelectOption(label="Warrior", emoji="🛡️"),
+            discord.SelectOption(label="Archer", emoji="🏹"),
+            discord.SelectOption(label="Mage", emoji="🪄"),
+            discord.SelectOption(label="Shaman", emoji="🌿"),
+            discord.SelectOption(label="Assassin", emoji="🗡️")
+        ]
+
+        super().__init__(placeholder="Select class", options=options)
+
+    async def callback(self, interaction):
+
+        party = parties.get(self.party_id)
+        if not party:
+            return await interaction.response.send_message("Party not found.", ephemeral=True)
+
+        # prevent duplicate join
+        if any(m["user"] == interaction.user.id for m in party["members"]):
+            return await interaction.response.send_message("Already in party.", ephemeral=True)
+
+        if len(party["members"]) >= 4:
+            return await interaction.response.send_message("Party full.", ephemeral=True)
+
+        party["members"].append({
+            "user": interaction.user.id,
+            "class": self.values[0]
+        })
+
+        save_parties()
+
+        await interaction.response.send_message("Joined party!", ephemeral=True)
+
+class JoinClassView(discord.ui.View):
+    def __init__(self, party_id):
+        super().__init__(timeout=120)
+        self.add_item(JoinClass(party_id))
+
 class PartyView(discord.ui.View):
     def __init__(self, party_id):
         super().__init__(timeout=None)
-
         self.party_id = party_id
 
-    @discord.ui.button(
-        label="Join",
-        style=discord.ButtonStyle.green
-    )
+    def get_party(self):
+        return parties.get(self.party_id)
+
+    async def update_party_message(self, interaction):
+        party = self.get_party()
+        if not party:
+            return
+
+        channel = interaction.guild.get_channel(RAID_PARTY_CHANNEL_ID)
+        embed = build_party_embed(self.party_id)
+
+        # try updating last message (simple approach: resend)
+        await channel.send(embed=embed, view=PartyView(self.party_id))
+
+    @discord.ui.button(label="Join", style=discord.ButtonStyle.green)
     async def join(self, interaction, button):
 
-        party = parties[self.party_id]
+        party = self.get_party()
+        if not party:
+            return await interaction.response.send_message("Party not found.", ephemeral=True)
+
+        # already in party check
+        if any(m["user"] == interaction.user.id for m in party["members"]):
+            return await interaction.response.send_message("You're already in the party.", ephemeral=True)
 
         if len(party["members"]) >= 4:
-            await interaction.response.send_message(
-                "Party is full.",
-                ephemeral=True
-            )
-            return
+            return await interaction.response.send_message("Party is full.", ephemeral=True)
 
         await interaction.response.send_message(
             "Choose your class:",
@@ -493,25 +594,31 @@ class PartyView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(
-        label="Leave",
-        style=discord.ButtonStyle.red
-    )
+    @discord.ui.button(label="Leave", style=discord.ButtonStyle.red)
     async def leave(self, interaction, button):
 
-        party = parties[self.party_id]
+        party = self.get_party()
+        if not party:
+            return await interaction.response.send_message("Party not found.", ephemeral=True)
 
+        user_id = interaction.user.id
+
+        is_member = any(m["user"] == user_id for m in party["members"])
+        if not is_member:
+            return await interaction.response.send_message("You're not in this party.", ephemeral=True)
+
+        # 🔥 LEADER LOGIC
+        if user_id == party["leader"]:
+            return await start_close_confirmation(interaction, self.party_id)
+
+        # normal member leave
         party["members"] = [
-            m for m in party["members"]
-            if m["user"] != interaction.user.id
+            m for m in party["members"] if m["user"] != user_id
         ]
 
         save_parties()
 
-        await interaction.response.send_message(
-            "You left the party.",
-            ephemeral=True
-        )
+        await interaction.response.send_message("You left the party.", ephemeral=True)
 
 @bot.tree.command(
     name="raid_setup",
