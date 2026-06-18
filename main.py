@@ -53,6 +53,7 @@ LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516487564473798806
 RAID_PANEL_CHANNEL_ID = 1516508845902397521
 RAID_PARTY_CHANNEL_ID = 1517133054630559965
+RAID_ROLE_ID = 1517150536615592138
 pending_closures = {}
 
 GUILD_ROLES = {
@@ -346,26 +347,33 @@ class RaidPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
+        
     @discord.ui.button(
         label="⚔️ Create Party",
         style=discord.ButtonStyle.green,
         custom_id="create_party"
     )
     async def create_party(self, interaction, button):
-        await interaction.response.send_message(
-            "Choose your raid:",
-            view=RaidSelectView(),
-            ephemeral=True
-        )
 
+    # ping role (IMPORTANT)
+    role_mention = f"<@&{RAID_ROLE_ID}>"
+
+    await interaction.response.send_message(
+        f"🎮 Creating a raid party...\n"
+        f"⚠️ Parties automatically close after **15 minutes**.\n"
+        f"{role_mention}",
+        view=RaidSelectView(),
+        ephemeral=True
+    )
+    
 class RaidSelect(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label="TCC"),
             discord.SelectOption(label="NOL"),
-            discord.SelectOption(label="NOG"),
-            discord.SelectOption(label="ORPH"),
-            discord.SelectOption(label="NA")
+            discord.SelectOption(label="NOTG"),
+            discord.SelectOption(label="TNA"),
+            discord.SelectOption(label="TWP")
         ]
 
         super().__init__(
@@ -463,24 +471,46 @@ def build_party_embed(party_id):
     party = parties[party_id]
 
     embed = discord.Embed(
-        title=f"⚔️ {party['raid']} Party #{party_id}",
+        title=f"⚔️ Raid Party • {party['raid']} #{party_id}",
         color=discord.Color.gold()
     )
 
-    member_text = ""
-
-    for member in party["members"]:
-        member_text += (
-            f"{member['class']} • <@{member['user']}>\n"
-        )
-
     embed.add_field(
-        name=f"Players ({len(party['members'])}/4)",
-        value=member_text,
+        name="👑 Leader",
+        value=f"<@{party['leader']}>",
         inline=False
     )
 
+    members = []
+    for m in party["members"]:
+        members.append(f"**{m['class']}** — <@{m['user']}>")
+
+    embed.add_field(
+        name=f"👥 Members ({len(party['members'])}/4)",
+        value="\n".join(members),
+        inline=False
+    )
+
+    # visual capacity bar
+    filled = "🟩" * len(party["members"])
+    empty = "⬛" * (4 - len(party["members"]))
+    embed.add_field(
+        name="📊 Capacity",
+        value=f"{filled}{empty}",
+        inline=False
+    )
+
+    # 🕒 IMPORTANT: lifetime warning
+    embed.add_field(
+        name="⏳ Lifetime",
+        value="This party will automatically close after **15 minutes**.",
+        inline=False
+    )
+
+    embed.set_footer(text="Use Join to enter • Leave to exit • Leader can close")
+
     return embed
+
 
 class ClosePartyView(discord.ui.View):
     def __init__(self, party_id):
@@ -713,9 +743,23 @@ class PartyView(discord.ui.View):
 async def raid_setup(interaction: discord.Interaction):
 
     embed = discord.Embed(
-        title="⚔️ Wynncraft Raid Finder",
-        description="Create or join raid parties."
-    )
+    title="⚔️ Raid Finder",
+    description=(
+        "Create or join raid parties instantly.\n\n"
+        "• Max 4 players per party\n"
+        "• Auto-disbands after 15 minutes\n"
+        "• Leader controls party management"
+    ),
+    color=discord.Color.blurple()
+)
+
+embed.add_field(
+    name="📌 How it works",
+    value="1. Click Create Party\n2. Choose raid\n3. Select class\n4. Join others or wait for teammates",
+    inline=False
+)
+
+embed.set_footer(text="Wynncraft Raid System")
 
     await interaction.channel.send(
         embed=embed,
