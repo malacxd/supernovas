@@ -436,8 +436,10 @@ class ClassSelect(discord.ui.Select):
         embed = build_party_embed(party_id)
 
         msg = await party_channel.send(
-            embed=embed,
-            view=PartyView(party_id)
+            content=f"<@&{RAID_ROLE_ID}>",
+            embed=build_party_embed(party_id),
+            view=PartyView(party_id),
+            allowed_mentions=discord.AllowedMentions(roles=True)
         )
 
         parties[party_id]["message_id"] = msg.id
