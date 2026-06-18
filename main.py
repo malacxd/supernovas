@@ -356,7 +356,7 @@ class RaidPanelView(discord.ui.View):
     async def create_party(self, interaction, button):
 
     # ping role (IMPORTANT)
-    role_mention = f"<@&{RAID_ROLE_ID}>"
+        role_mention = f"<@&{RAID_ROLE_ID}>"
 
     await interaction.response.send_message(
         f"🎮 Creating a raid party...\n"
