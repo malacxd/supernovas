@@ -513,8 +513,12 @@ class PartyView(discord.ui.View):
             ephemeral=True
         )
 
-@bot.tree.command(name="setup_raidfinder")
-async def setup_raidfinder(interaction):
+@bot.tree.command(
+    name="raid_setup",
+    description="Create raid finder panel",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def raid_setup(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="⚔️ Wynncraft Raid Finder",
