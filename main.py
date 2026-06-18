@@ -65,6 +65,9 @@ DATA_FILE = "stats.json"
 PARTY_FILE = "parties.json"
 last_activity = "idle"
 
+def is_full(party):
+    return len(party["members"]) >= 4
+
 def load_stats():
     try:
         with open(DATA_FILE, "r") as f:
@@ -422,7 +425,8 @@ class ClassSelect(discord.ui.Select):
                 }
             ],
             "created_at": discord.utils.utcnow().timestamp(),
-            "message_id": None
+            "message_id": None,
+            "notified_full": False
         }
 
         save_parties()
@@ -446,6 +450,31 @@ class ClassSelect(discord.ui.Select):
             ephemeral=True
         )
 
+async def handle_party_full(guild, party_id):
+    party = parties.get(party_id)
+    if not party:
+        return
+
+    if len(party["members"]) < 4:
+        return
+
+    if party.get("notified_full"):
+        return
+
+    party["notified_full"] = True
+    save_parties()
+
+    channel = guild.get_channel(RAID_PANEL_CHANNEL_ID)
+    if not channel:
+        return
+
+    mentions = " ".join(f"<@{m['user']}>" for m in party["members"])
+
+    await channel.send(
+        content=f"🔥 RAID PARTY FULL!\n{mentions}",
+        allowed_mentions=discord.AllowedMentions(users=True)
+    )
+
 async def start_close_confirmation(interaction, party_id):
 
     pending_closures[party_id] = interaction.user.id
@@ -467,11 +496,12 @@ def build_party_embed(party_id):
 
     party = parties[party_id]
 
+    full = len(party["members"]) >= 4
+
     embed = discord.Embed(
         title=f"⚔️ Raid Party • {party['raid']} #{party_id}",
-        color=discord.Color.gold()
+        color=discord.Color.green() if full else discord.Color.gold()
     )
-
     embed.add_field(
         name="👑 Leader",
         value=f"<@{party['leader']}>",
@@ -503,6 +533,19 @@ def build_party_embed(party_id):
         value="This party will automatically close after **15 minutes**.",
         inline=False
     )
+
+    if full:
+        embed.add_field(
+            name="🔥 STATUS",
+            value="**THIS PARTY IS FULL — READY TO START RAID!**",
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="🟡 STATUS",
+            value="Waiting for players...",
+            inline=False
+        )
 
     embed.set_footer(text="Use Join to enter • Leave to exit • Leader can close")
 
@@ -577,6 +620,8 @@ class JoinClass(discord.ui.Select):
 
         save_parties()
         await refresh_party(interaction.guild, self.party_id)
+
+        await handle_party_full(interaction.guild, self.party_id)
 
         await interaction.response.send_message("Joined party!", ephemeral=True)
 
@@ -659,6 +704,12 @@ class PartyView(discord.ui.View):
     def __init__(self, party_id):
         super().__init__(timeout=None)
         self.party_id = party_id
+
+        party = parties.get(party_id)
+
+        if party and len(party["members"]) >= 4:
+            for item in self.children:
+                item.disabled = True
 
     def get_party(self):
         return parties.get(self.party_id)
