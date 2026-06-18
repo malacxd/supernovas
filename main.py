@@ -51,6 +51,8 @@ GUILD_ID = 1516146879967002724
 STAFF_CHANNEL_ID = 1516159145869574265
 LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516487564473798806
+RAID_PANEL_CHANNEL_ID = 1516508845902397521
+RAID_PARTY_CHANNEL_ID = 1517133054630559965
 
 GUILD_ROLES = {
     "TDbD": 1516166981550866644,
@@ -59,6 +61,7 @@ GUILD_ROLES = {
 }
 
 DATA_FILE = "stats.json"
+PARTY_FILE = "parties.json"
 last_activity = "idle"
 
 def load_stats():
@@ -323,6 +326,213 @@ async def setup_application(interaction: discord.Interaction):
     await interaction.channel.send(embed=embed, view=ApplyView())
     await interaction.response.send_message("Panel created!", ephemeral=True)
 
+# ----------------- RAID FINDER -----------------
+
+def load_parties():
+    try:
+        with open(PARTY_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+parties = load_parties()
+
+def save_parties():
+    with open(PARTY_FILE, "w") as f:
+        json.dump(parties, f, indent=4)
+
+class RaidPanelView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="⚔️ Create Party",
+        style=discord.ButtonStyle.green,
+        custom_id="create_party"
+    )
+    async def create_party(self, interaction, button):
+        await interaction.response.send_message(
+            "Choose your raid:",
+            view=RaidSelectView(),
+            ephemeral=True
+        )
+
+class RaidSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="TCC"),
+            discord.SelectOption(label="NOL"),
+            discord.SelectOption(label="NOG"),
+            discord.SelectOption(label="ORPH"),
+            discord.SelectOption(label="NA")
+        ]
+
+        super().__init__(
+            placeholder="Select raid",
+            options=options
+        )
+
+    async def callback(self, interaction):
+        raid = self.values[0]
+
+        await interaction.response.send_message(
+            f"Selected {raid}. Choose your class:",
+            view=ClassSelectView(raid),
+            ephemeral=True
+        )
+
+class RaidSelectView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=300)
+        self.add_item(RaidSelect())
+
+class ClassSelect(discord.ui.Select):
+    def __init__(self, raid):
+        self.raid = raid
+
+        options = [
+            discord.SelectOption(label="Warrior", emoji="🛡️"),
+            discord.SelectOption(label="Archer", emoji="🏹"),
+            discord.SelectOption(label="Mage", emoji="🪄"),
+            discord.SelectOption(label="Shaman", emoji="🌿"),
+            discord.SelectOption(label="Assassin", emoji="🗡️")
+        ]
+
+        super().__init__(
+            placeholder="Select class",
+            options=options
+        )
+    async def callback(self, interaction):
+
+        player_class = self.values[0]
+
+        party_id = str(len(parties) + 1)
+
+        parties[party_id] = {
+            "raid": self.raid,
+            "leader": interaction.user.id,
+            "members": [
+                {
+                    "user": interaction.user.id,
+                    "class": player_class
+                }
+            ]
+        }
+
+        save_parties()
+
+        party_channel = interaction.guild.get_channel(
+            RAID_PARTY_CHANNEL_ID
+        )
+
+        embed = build_party_embed(party_id)
+
+        await party_channel.send(
+            embed=embed,
+            view=PartyView(party_id)
+        )
+
+        await interaction.response.send_message(
+            "Party created!",
+            ephemeral=True
+        )
+
+class ClassSelectView(discord.ui.View):
+    def __init__(self, raid):
+        super().__init__(timeout=300)
+        self.add_item(ClassSelect(raid))
+
+def build_party_embed(party_id):
+
+    party = parties[party_id]
+
+    embed = discord.Embed(
+        title=f"⚔️ {party['raid']} Party #{party_id}",
+        color=discord.Color.gold()
+    )
+
+    member_text = ""
+
+    for member in party["members"]:
+        member_text += (
+            f"{member['class']} • <@{member['user']}>\n"
+        )
+
+    embed.add_field(
+        name=f"Players ({len(party['members'])}/4)",
+        value=member_text,
+        inline=False
+    )
+
+    return embed
+
+class PartyView(discord.ui.View):
+    def __init__(self, party_id):
+        super().__init__(timeout=None)
+
+        self.party_id = party_id
+
+    @discord.ui.button(
+        label="Join",
+        style=discord.ButtonStyle.green
+    )
+    async def join(self, interaction, button):
+
+        party = parties[self.party_id]
+
+        if len(party["members"]) >= 4:
+            await interaction.response.send_message(
+                "Party is full.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_message(
+            "Choose your class:",
+            view=JoinClassView(self.party_id),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Leave",
+        style=discord.ButtonStyle.red
+    )
+    async def leave(self, interaction, button):
+
+        party = parties[self.party_id]
+
+        party["members"] = [
+            m for m in party["members"]
+            if m["user"] != interaction.user.id
+        ]
+
+        save_parties()
+
+        await interaction.response.send_message(
+            "You left the party.",
+            ephemeral=True
+        )
+
+@bot.tree.command(name="setup_raidfinder")
+async def setup_raidfinder(interaction):
+
+    embed = discord.Embed(
+        title="⚔️ Wynncraft Raid Finder",
+        description="Create or join raid parties."
+    )
+
+    await interaction.channel.send(
+        embed=embed,
+        view=RaidPanelView()
+    )
+
+    await interaction.response.send_message(
+        "Raid finder created.",
+        ephemeral=True
+    )
+
+
+
 # ----------------- READY EVENT -----------------
 @bot.event
 async def on_ready():
@@ -332,6 +542,10 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
+    bot.add_view(RaidPanelView())
+
+    for party_id in parties:
+    bot.add_view(PartyView(party_id))
 
     print(f"Logged in as {bot.user}")
 
