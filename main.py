@@ -418,6 +418,7 @@ class ClassSelect(discord.ui.Select):
                     "class": player_class
                 }
             ],
+            "created_at": discord.utils.utcnow().timestamp(),
             "message_id": None
         }
 
@@ -560,6 +561,9 @@ class JoinClassView(discord.ui.View):
 
 async def refresh_party(guild, party_id):
     party = parties.get(party_id)
+    if not party.get("message_id"):
+        return
+    
     if not party:
         return
 
@@ -578,6 +582,50 @@ async def refresh_party(guild, party_id):
         embed=embed,
         view=PartyView(party_id)
     )
+
+async def party_cleanup_task():
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+        now = discord.utils.utcnow().timestamp()
+
+        to_delete = []
+
+        for party_id, party in list(parties.items()):
+
+            created = party.get("created_at", now)
+            age = now - created
+
+            # 15 minutes = 900 seconds
+            if age >= 900:
+                to_delete.append(party_id)
+
+        for party_id in to_delete:
+            await delete_party(party_id, reason="expired")
+
+        await asyncio.sleep(30)
+
+async def delete_party(party_id, reason="closed"):
+    party = parties.get(party_id)
+    if not party:
+        return
+
+    channel = bot.get_channel(RAID_PARTY_CHANNEL_ID)
+    if not channel:
+        return
+
+    # delete message
+    try:
+        msg = await channel.fetch_message(party["message_id"])
+        await msg.delete()
+    except:
+        pass
+
+    # remove from memory + file
+    parties.pop(party_id, None)
+    save_parties()
+
+    print(f"Party {party_id} deleted ({reason})")
 
 class PartyView(discord.ui.View):
     def __init__(self, party_id):
@@ -689,6 +737,7 @@ async def on_ready():
     bot.add_view(ApplyView())
 
     print("Views re-registered")
+    bot.loop.create_task(party_cleanup_task())
 
     # 🧠 recovery scan
     for app_id, data in stats.get("applications", {}).items():
