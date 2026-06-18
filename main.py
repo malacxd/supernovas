@@ -497,8 +497,12 @@ class ClosePartyView(discord.ui.View):
         if interaction.user.id != party["leader"]:
             return await interaction.response.send_message("Only leader can close.", ephemeral=True)
 
-        parties.pop(self.party_id, None)
-        save_parties()
+        await delete_party(self.party_id, reason="manual close")
+
+        await interaction.response.edit_message(
+            content="❌ Party closed.",
+            view=None
+        )
 
         pending_closures.pop(self.party_id, None)
 
@@ -561,10 +565,12 @@ class JoinClassView(discord.ui.View):
 
 async def refresh_party(guild, party_id):
     party = parties.get(party_id)
-    if not party.get("message_id"):
-        return
-    
+
     if not party:
+        return
+
+    message_id = party.get("message_id")
+    if not message_id:
         return
 
     channel = guild.get_channel(RAID_PARTY_CHANNEL_ID)
@@ -572,7 +578,7 @@ async def refresh_party(guild, party_id):
         return
 
     try:
-        msg = await channel.fetch_message(party["message_id"])
+        msg = await channel.fetch_message(message_id)
     except:
         return
 
@@ -611,17 +617,17 @@ async def delete_party(party_id, reason="closed"):
         return
 
     channel = bot.get_channel(RAID_PARTY_CHANNEL_ID)
-    if not channel:
-        return
 
-    # delete message
-    try:
-        msg = await channel.fetch_message(party["message_id"])
-        await msg.delete()
-    except:
-        pass
+    message_id = party.get("message_id")
 
-    # remove from memory + file
+    if channel and message_id:
+        try:
+            msg = await channel.fetch_message(message_id)
+            await msg.delete()
+        except Exception as e:
+            print("Delete message failed:", e)
+
+    # IMPORTANT: remove FIRST from memory BEFORE anything else
     parties.pop(party_id, None)
     save_parties()
 
@@ -649,6 +655,9 @@ class PartyView(discord.ui.View):
     @discord.ui.button(label="Join", style=discord.ButtonStyle.green)
     async def join(self, interaction, button):
 
+        if self.party_id not in parties:
+            return await interaction.response.send_message("This party is closed.", ephemeral=True)
+
         party = self.get_party()
         if not party:
             return await interaction.response.send_message("Party not found.", ephemeral=True)
@@ -668,6 +677,9 @@ class PartyView(discord.ui.View):
 
     @discord.ui.button(label="Leave", style=discord.ButtonStyle.red)
     async def leave(self, interaction, button):
+
+        if self.party_id not in parties:
+            return await interaction.response.send_message("This party is closed.", ephemeral=True)
 
         party = self.get_party()
         if not party:
