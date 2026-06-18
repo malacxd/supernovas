@@ -751,15 +751,15 @@ async def raid_setup(interaction: discord.Interaction):
         "• Leader controls party management"
     ),
     color=discord.Color.blurple()
-)
+    )
 
-embed.add_field(
-    name="📌 How it works",
-    value="1. Click Create Party\n2. Choose raid\n3. Select class\n4. Join others or wait for teammates",
-    inline=False
-)
+    embed.add_field(
+        name="📌 How it works",
+        value="1. Click Create Party\n2. Choose raid\n3. Select class\n4. Join others or wait for teammates",
+        inline=False
+    )
 
-embed.set_footer(text="Wynncraft Raid System")
+    embed.set_footer(text="Wynncraft Raid System")
 
     await interaction.channel.send(
         embed=embed,
