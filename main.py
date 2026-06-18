@@ -544,7 +544,7 @@ async def on_ready():
         print(e)
     bot.add_view(RaidPanelView())
 
-    for party_id in parties:
+for party_id in parties:
     bot.add_view(PartyView(party_id))
 
     print(f"Logged in as {bot.user}")
