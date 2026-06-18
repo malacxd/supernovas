@@ -52,7 +52,6 @@ STAFF_CHANNEL_ID = 1516159145869574265
 LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516487564473798806
 RAID_PANEL_CHANNEL_ID = 1516508845902397521
-RAID_PARTY_CHANNEL_ID = 1517133054630559965
 RAID_ROLE_ID = 1517150536615592138
 pending_closures = {}
 
@@ -432,7 +431,7 @@ class ClassSelect(discord.ui.Select):
 
         save_parties()
 
-        party_channel = interaction.guild.get_channel(RAID_PARTY_CHANNEL_ID)
+        party_channel = interaction.guild.get_channel(RAID_PANEL_CHANNEL_ID)
 
         embed = build_party_embed(party_id)
 
@@ -598,7 +597,7 @@ async def refresh_party(guild, party_id):
     if not message_id:
         return
 
-    channel = guild.get_channel(RAID_PARTY_CHANNEL_ID)
+    channel = guild.get_channel(RAID_PANEL_CHANNEL_ID)
     if not channel:
         return
 
@@ -641,7 +640,7 @@ async def delete_party(party_id, reason="closed"):
     if not party:
         return
 
-    channel = bot.get_channel(RAID_PARTY_CHANNEL_ID)
+    channel = bot.get_channel(RAID_PANEL_CHANNEL_ID)
 
     message_id = party.get("message_id")
 
@@ -671,7 +670,7 @@ class PartyView(discord.ui.View):
         if not party:
             return
 
-        channel = interaction.guild.get_channel(RAID_PARTY_CHANNEL_ID)
+        channel = interaction.guild.get_channel(RAID_PANEL_CHANNEL_ID)
         embed = build_party_embed(self.party_id)
 
         # try updating last message (simple approach: resend)
