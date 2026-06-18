@@ -358,13 +358,13 @@ class RaidPanelView(discord.ui.View):
     # ping role (IMPORTANT)
         role_mention = f"<@&{RAID_ROLE_ID}>"
 
-    await interaction.response.send_message(
-        f"🎮 Creating a raid party...\n"
-        f"⚠️ Parties automatically close after **15 minutes**.\n"
-        f"{role_mention}",
-        view=RaidSelectView(),
-        ephemeral=True
-    )
+        await interaction.response.send_message(
+            f"🎮 Creating a raid party...\n"
+            f"⚠️ Parties automatically close after **15 minutes**.\n"
+            f"{role_mention}",
+            view=RaidSelectView(),
+            ephemeral=True
+        )
     
 class RaidSelect(discord.ui.Select):
     def __init__(self):
@@ -535,11 +535,6 @@ class ClosePartyView(discord.ui.View):
         )
 
         pending_closures.pop(self.party_id, None)
-
-        await interaction.response.edit_message(
-            content="❌ Party closed.",
-            view=None
-        )
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction, button):
