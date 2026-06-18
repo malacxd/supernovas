@@ -417,21 +417,23 @@ class ClassSelect(discord.ui.Select):
                     "user": interaction.user.id,
                     "class": player_class
                 }
-            ]
+            ],
+            "message_id": None
         }
 
         save_parties()
 
-        party_channel = interaction.guild.get_channel(
-            RAID_PARTY_CHANNEL_ID
-        )
+        party_channel = interaction.guild.get_channel(RAID_PARTY_CHANNEL_ID)
 
         embed = build_party_embed(party_id)
 
-        await party_channel.send(
+        msg = await party_channel.send(
             embed=embed,
             view=PartyView(party_id)
         )
+
+        parties[party_id]["message_id"] = msg.id
+        save_parties()
 
         await interaction.response.send_message(
             "Party created!",
@@ -547,6 +549,7 @@ class JoinClass(discord.ui.Select):
         })
 
         save_parties()
+        await refresh_party(interaction.guild, self.party_id)
 
         await interaction.response.send_message("Joined party!", ephemeral=True)
 
@@ -554,6 +557,27 @@ class JoinClassView(discord.ui.View):
     def __init__(self, party_id):
         super().__init__(timeout=120)
         self.add_item(JoinClass(party_id))
+
+async def refresh_party(guild, party_id):
+    party = parties.get(party_id)
+    if not party:
+        return
+
+    channel = guild.get_channel(RAID_PARTY_CHANNEL_ID)
+    if not channel:
+        return
+
+    try:
+        msg = await channel.fetch_message(party["message_id"])
+    except:
+        return
+
+    embed = build_party_embed(party_id)
+
+    await msg.edit(
+        embed=embed,
+        view=PartyView(party_id)
+    )
 
 class PartyView(discord.ui.View):
     def __init__(self, party_id):
@@ -617,6 +641,7 @@ class PartyView(discord.ui.View):
         ]
 
         save_parties()
+        await refresh_party(interaction.guild, self.party_id)
 
         await interaction.response.send_message("You left the party.", ephemeral=True)
 
