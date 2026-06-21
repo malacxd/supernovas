@@ -2,7 +2,6 @@ import os
 import discord
 from discord.ext import commands
 import asyncio
-import itertools
 import json
 
 # ----------------- TEXTS -----------------
@@ -69,22 +68,6 @@ last_activity = "idle"
 def is_full(party):
     return len(party["members"]) >= 4
 
-def load_stats():
-    try:
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {
-            "app_count": 0
-        }
-
-stats = load_stats()
-stats.setdefault("applications", {})
-
-def save_stats():
-    with open(DATA_FILE, "w") as f:
-        json.dump(stats, f)
-
 # ----------------- MODAL -----------------
 class UsernameModal(discord.ui.Modal, title="Minecraft Verification"):
 
@@ -133,20 +116,7 @@ class GuildSelect(discord.ui.Select):
         try:
             await interaction.response.defer(ephemeral=True)
 
-            app_id = str(stats["app_count"])
-            stats["app_count"] += 1
-
-            stats.setdefault("applications", {})
-
             guild_name = self.values[0]
-
-            stats["applications"][app_id] = {
-                "user_id": interaction.user.id,
-                "mc_name": self.username,
-                "guild": guild_name
-            }
-
-            save_stats()
 
             staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
 
@@ -155,7 +125,7 @@ class GuildSelect(discord.ui.Select):
                 return
 
             embed = discord.Embed(
-                title=f"📥 Application #{app_id}",
+                title="📥 New Application",
                 color=discord.Color.orange(),
                 timestamp=discord.utils.utcnow()
             )
@@ -167,7 +137,11 @@ class GuildSelect(discord.ui.Select):
             await staff_channel.send(
                 content=f"<@&{STAFF_ROLE_ID}>",
                 embed=embed,
-                view=AppActionView(app_id)
+                view=ReviewView(
+                    interaction.user.id,
+                    self.username,
+                    guild_name
+                )
             )
 
             await interaction.followup.send(
@@ -201,37 +175,32 @@ class ApplyView(discord.ui.View):
         )
 
 # ----------------- REVIEW SYSTEM -----------------
-class AppActionView(discord.ui.View):
-    def __init__(self, app_id: str):
+class ReviewView(discord.ui.View):
+    def __init__(self, member_id, mc_name, guild_name):
         super().__init__(timeout=None)
-        self.app_id = app_id
+        self.member_id = member_id
+        self.mc_name = mc_name
+        self.guild_name = guild_name
 
     @discord.ui.button(
         label="Accept",
-        style=discord.ButtonStyle.green,
-        custom_id="accept_button"
+        style=discord.ButtonStyle.green
     )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-        data = stats["applications"].get(self.app_id)
-
-        if not data:
-            await interaction.response.send_message("Application not found.", ephemeral=True)
-            return
-
-        member = interaction.guild.get_member(data["user_id"])
-        role = interaction.guild.get_role(GUILD_ROLES[data["guild"]])
+        member = interaction.guild.get_member(self.member_id)
+        role = interaction.guild.get_role(GUILD_ROLES[self.guild_name])
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
         if member and role:
-            await member.edit(nick=data["mc_name"])
+            await member.edit(nick=self.mc_name)
             await member.add_roles(role)
 
             try:
                 await member.send(
                     embed=discord.Embed(
                         title="✅ Application Accepted",
-                        description=f"You were accepted into **{data['guild']}**",
+                        description=f"You were accepted into **{self.guild_name}**",
                         color=discord.Color.green()
                     )
                 )
@@ -240,13 +209,13 @@ class AppActionView(discord.ui.View):
 
         if log_channel:
             embed = discord.Embed(
-                title=f"✅ Accepted #{self.app_id}",
+                title="✅ Accepted",
                 color=discord.Color.green(),
                 timestamp=discord.utils.utcnow()
             )
             embed.add_field(name="User", value=member.mention if member else "Unknown")
-            embed.add_field(name="MC Name", value=data["mc_name"])
-            embed.add_field(name="Guild", value=data["guild"])
+            embed.add_field(name="MC Name", value=self.mc_name)
+            embed.add_field(name="Guild", value=self.guild_name)
 
             await log_channel.send(embed=embed)
 
@@ -254,18 +223,11 @@ class AppActionView(discord.ui.View):
 
     @discord.ui.button(
         label="Deny",
-        style=discord.ButtonStyle.red,
-        custom_id="deny_button"
+        style=discord.ButtonStyle.red
     )
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-        data = stats["applications"].get(self.app_id)
-
-        if not data:
-            await interaction.response.send_message("Application not found.", ephemeral=True)
-            return
-
-        member = interaction.guild.get_member(data["user_id"])
+        member = interaction.guild.get_member(self.member_id)
         log_channel = interaction.guild.get_channel(LOG_CHANNEL_ID)
 
         if member:
@@ -282,13 +244,13 @@ class AppActionView(discord.ui.View):
 
         if log_channel:
             embed = discord.Embed(
-                title=f"❌ Denied #{self.app_id}",
+                title="❌ Denied",
                 color=discord.Color.red(),
                 timestamp=discord.utils.utcnow()
             )
-            embed.add_field(name="User", value=f"<@{data['user_id']}>")
-            embed.add_field(name="MC Name", value=data["mc_name"])
-            embed.add_field(name="Guild", value=data["guild"])
+            embed.add_field(name="User", value=f"<@{self.member_id}>")
+            embed.add_field(name="MC Name", value=self.mc_name)
+            embed.add_field(name="Guild", value=self.guild_name)
 
             await log_channel.send(embed=embed)
 
@@ -830,6 +792,57 @@ async def setup_raidfinder(interaction: discord.Interaction):
 
 
 # ----------------- READY EVENT -----------------
+
+async def presence_loop():
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name="grooting my slang"
+            )
+        )
+        await asyncio.sleep(30)
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="grinding bat cave"
+            )
+        )
+        await asyncio.sleep(30)
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name="join tdbd"
+            )
+        )
+        await asyncio.sleep(30)
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.playing,
+                name="beating Anathema"
+            )
+        )
+        await asyncio.sleep(30)
+
+        await bot.change_presence(
+            status=discord.Status.idle,
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="lootrunning for nothing"
+            )
+        )
+        await asyncio.sleep(30)
+
 @bot.event
 async def on_ready():
     try:
@@ -850,60 +863,7 @@ async def on_ready():
 
     print("Views re-registered")
     bot.loop.create_task(party_cleanup_task())
-
-    # 🧠 recovery scan
-    for app_id, data in stats.get("applications", {}).items():
-        print(f"Loaded application #{app_id} for {data['mc_name']}")
-    while True:
-
-        # 1) Apps counter status
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.listening,
-                name="grooting my slang"
-            )
-        )
-        await asyncio.sleep(30)
-
-        # 2) General system status
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name="grinding bat cave"
-            )
-        )
-        await asyncio.sleep(30)
-
-        # 3) Guild management
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.listening,
-                name="join tdbd"
-            )
-        )
-        await asyncio.sleep(30)
-
-        # 4) Staff activity vibe
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.playing,
-                name="beating Anathema"
-            )
-        )
-        await asyncio.sleep(30)
-
-        await bot.change_presence(
-            status=discord.Status.idle,
-            activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name="lootrunning for nothing"
-            )
-        )
-        await asyncio.sleep(30)
+    bot.loop.create_task(presence_loop())
 
 
 # ----------------- RUN BOT -----------------
