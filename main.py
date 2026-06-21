@@ -53,6 +53,7 @@ LOG_CHANNEL_ID = 1516159164274180268
 STAFF_ROLE_ID = 1516487564473798806
 RAID_PANEL_CHANNEL_ID = 1516508845902397521
 RAID_ROLE_ID = 1517150536615592138
+ADMIN_ROLE_ID = 1516156178395172985
 pending_closures = {}
 
 GUILD_ROLES = {
@@ -164,6 +165,7 @@ class GuildSelect(discord.ui.Select):
             embed.add_field(name="Guild", value=guild_name, inline=False)
 
             await staff_channel.send(
+                content=f"<@&{STAFF_ROLE_ID}>",
                 embed=embed,
                 view=AppActionView(app_id)
             )
@@ -296,9 +298,9 @@ class AppActionView(discord.ui.View):
 @bot.tree.command(name="setup_application", description="Create verification panel")
 async def setup_application(interaction: discord.Interaction):
 
-    staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
+    admin_role = interaction.guild.get_role(ADMIN_ROLE_ID)
 
-    if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
+    if not any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles):
         await interaction.response.send_message(
             "❌ You don't have permission to use this command.",
             ephemeral=True
@@ -371,7 +373,7 @@ class RaidSelect(discord.ui.Select):
             discord.SelectOption(label="NOL"),
             discord.SelectOption(label="NOTG"),
             discord.SelectOption(label="TNA"),
-            discord.SelectOption(label="TWP")
+            discord.SelectOption(label="WTP")
         ]
 
         super().__init__(
@@ -669,8 +671,7 @@ async def party_cleanup_task():
             created = party.get("created_at", now)
             age = now - created
 
-            # 15 minutes = 900 seconds
-            if age >= 900:
+            if age >= 1800:
                 to_delete.append(party_id)
 
         for party_id in to_delete:
@@ -785,6 +786,13 @@ class PartyView(discord.ui.View):
 )
 async def raid_setup(interaction: discord.Interaction):
 
+    if not any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles):
+    await interaction.response.send_message(
+        "❌ You don't have permission.",
+        ephemeral=True
+    )
+    return
+
     embed = discord.Embed(
     title="⚔️ Raid Finder",
     description=(
@@ -848,7 +856,7 @@ async def on_ready():
             status=discord.Status.idle,
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name=f"{stats['app_count']} applications"
+                name="grooting my slang"
             )
         )
         await asyncio.sleep(30)
