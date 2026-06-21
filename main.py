@@ -780,33 +780,38 @@ class PartyView(discord.ui.View):
         await interaction.response.send_message("You left the party.", ephemeral=True)
 
 @bot.tree.command(
-    name="raid_setup",
+    name="setup_raidfinder",
     description="Create raid finder panel",
     guild=discord.Object(id=GUILD_ID)
 )
-async def raid_setup(interaction: discord.Interaction):
+async def setup_raidfinder(interaction: discord.Interaction):
 
     if not any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles):
-    await interaction.response.send_message(
-        "❌ You don't have permission.",
-        ephemeral=True
-    )
-    return
+        await interaction.response.send_message(
+            "❌ You don't have permission.",
+            ephemeral=True
+        )
+        return
 
     embed = discord.Embed(
-    title="⚔️ Raid Finder",
-    description=(
-        "Create or join raid parties instantly.\n\n"
-        "• Max 4 players per party\n"
-        "• Auto-disbands after 15 minutes\n"
-        "• Leader controls party management"
-    ),
-    color=discord.Color.blurple()
+        title="⚔️ Raid Finder",
+        description=(
+            "Create or join raid parties instantly.\n\n"
+            "• Max 4 players per party\n"
+            "• Auto-disbands after 30 minutes\n"
+            "• Leader controls party management"
+        ),
+        color=discord.Color.blurple()
     )
 
     embed.add_field(
         name="📌 How it works",
-        value="1. Click Create Party\n2. Choose raid\n3. Select class\n4. Join others or wait for teammates",
+        value=(
+            "1. Click Create Party\n"
+            "2. Choose raid\n"
+            "3. Select class\n"
+            "4. Join others or wait for teammates"
+        ),
         inline=False
     )
 
