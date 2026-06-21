@@ -860,7 +860,6 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(e)
-    bot.add_view(RaidPanelView())
 
     for party_id in parties:
         bot.add_view(PartyView())
