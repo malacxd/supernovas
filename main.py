@@ -309,24 +309,43 @@ def save_parties():
     with open(PARTY_FILE, "w") as f:
         json.dump(parties, f, indent=4)
 
-class RaidPanelView(discord.ui.View):
+class RaidFinderView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        
+    # ---------------- CREATE PARTY ----------------
     @discord.ui.button(
         label="⚔️ Create Party",
         style=discord.ButtonStyle.green,
         custom_id="create_party"
     )
-    async def create_party(self, interaction, button):
+    async def create_party(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         await interaction.response.send_message(
             f"🎮 Creating a raid party...\n"
-            f"⚠️ Parties automatically close after **15 minutes**.\n",
+            f"⚠️ Parties automatically close after **30 minutes**.",
             view=RaidSelectView(),
             ephemeral=True
         )
+
+    # ---------------- RAIDER ROLE TOGGLE ----------------
+    @discord.ui.button(
+        label="🛡️ Raider Role",
+        style=discord.ButtonStyle.blurple,
+        custom_id="raider_role_toggle"
+    )
+    async def toggle_raider(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        role = interaction.guild.get_role(RAID_ROLE_ID)
+        if not role:
+            return await interaction.response.send_message("Role not found.", ephemeral=True)
+
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message("❌ Raider role removed.", ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message("✅ Raider role added.", ephemeral=True)
     
 class RaidSelect(discord.ui.Select):
     def __init__(self):
@@ -402,7 +421,7 @@ class ClassSelect(discord.ui.Select):
         msg = await party_channel.send(
             content=f"<@&{RAID_ROLE_ID}>",
             embed=build_party_embed(party_id),
-            view=PartyView(party_id),
+            view=PartyView(),
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
 
@@ -617,7 +636,7 @@ async def refresh_party(guild, party_id):
 
     await msg.edit(
         embed=embed,
-        view=PartyView(party_id)
+        view=PartyView()
     )
 
 async def party_cleanup_task():
@@ -664,50 +683,38 @@ async def delete_party(party_id, reason="closed"):
     print(f"Party {party_id} deleted ({reason})")
 
 class PartyView(discord.ui.View):
-    def __init__(self, party_id):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.party_id = party_id
 
-        party = parties.get(party_id)
+    @discord.ui.button(
+        label="Join",
+        style=discord.ButtonStyle.green,
+        custom_id="party_join"
+    )
+    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-        if party and len(party["members"]) >= 4:
-            for item in self.children:
-                item.disabled = True
+        party_id = None
 
-    def get_party(self):
-        return parties.get(self.party_id)
+        # find party by message_id
+        for pid, party in parties.items():
+            if party.get("message_id") == interaction.message.id:
+                party_id = pid
+                break
 
-    async def update_party_message(self, interaction):
-        party = self.get_party()
-        if not party:
-            return
-
-        channel = interaction.guild.get_channel(RAID_PANEL_CHANNEL_ID)
-        embed = build_party_embed(self.party_id)
-
-        # try updating last message (simple approach: resend)
-        await channel.send(embed=embed, view=PartyView(self.party_id))
-
-    @discord.ui.button(label="Join", style=discord.ButtonStyle.green)
-    async def join(self, interaction, button):
-
-        if self.party_id not in parties:
-            return await interaction.response.send_message("This party is closed.", ephemeral=True)
-
-        party = self.get_party()
-        if not party:
+        if not party_id:
             return await interaction.response.send_message("Party not found.", ephemeral=True)
 
-        # already in party check
+        party = parties[party_id]
+
         if any(m["user"] == interaction.user.id for m in party["members"]):
-            return await interaction.response.send_message("You're already in the party.", ephemeral=True)
+            return await interaction.response.send_message("Already in party.", ephemeral=True)
 
         if len(party["members"]) >= 4:
             return await interaction.response.send_message("Party is full.", ephemeral=True)
 
         await interaction.response.send_message(
             "Choose your class:",
-            view=JoinClassView(self.party_id),
+            view=JoinClassView(party_id),
             ephemeral=True
         )
 
@@ -758,7 +765,9 @@ async def setup_raidfinder(interaction: discord.Interaction):
     embed = discord.Embed(
         title="⚔️ Raid Finder",
         description=(
-            "Create or join raid parties instantly.\n\n"
+            "Everything you need for raids is here.\n\n"
+            "⚔️ Create parties and find teammates instantly\n"
+            "🛡️ Toggle Raider role to get access\n\n"
             "• Max 4 players per party\n"
             "• Auto-disbands after 30 minutes\n"
             "• Leader controls party management"
@@ -781,11 +790,11 @@ async def setup_raidfinder(interaction: discord.Interaction):
 
     await interaction.channel.send(
         embed=embed,
-        view=RaidPanelView()
+        view=RaidFinderView()
     )
 
     await interaction.response.send_message(
-        "Raid finder created.",
+        "Raid Finder panel created.",
         ephemeral=True
     )
 
@@ -854,7 +863,7 @@ async def on_ready():
     bot.add_view(RaidPanelView())
 
     for party_id in parties:
-        bot.add_view(PartyView(party_id))
+        bot.add_view(PartyView())
 
     print(f"Logged in as {bot.user}")
 
@@ -862,6 +871,7 @@ async def on_ready():
     bot.add_view(ApplyView())
 
     print("Views re-registered")
+    bot.add_view(RaidFinderView())
     bot.loop.create_task(party_cleanup_task())
     bot.loop.create_task(presence_loop())
 
