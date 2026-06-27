@@ -453,10 +453,14 @@ async def handle_party_full(guild, party_id):
 
     mentions = " ".join(f"<@{m['user']}>" for m in party["members"])
 
-    await channel.send(
+    msg = await channel.send(
         content=f"🔥 RAID PARTY FULL!\n{mentions}",
         allowed_mentions=discord.AllowedMentions(users=True)
     )
+
+    party["full_message_id"] = msg.id
+    save_parties()
+
 
 async def start_close_confirmation(interaction, party_id):
 
@@ -676,7 +680,15 @@ async def delete_party(party_id, reason="closed"):
         except Exception as e:
             print("Delete message failed:", e)
 
-    # IMPORTANT: remove FIRST from memory BEFORE anything else
+    full_message_id = party.get("full_message_id")
+
+    if channel and full_message_id:
+        try:
+            msg = await channel.fetch_message(full_message_id)
+            await msg.delete()
+        except Exception:
+            pass
+
     parties.pop(party_id, None)
     save_parties()
 
